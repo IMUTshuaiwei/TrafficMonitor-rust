@@ -1,115 +1,277 @@
-# Traffic Monitor (Rust Edition)
+# 流量监控 使用指南
 
-A complete Rust rewrite of [TrafficMonitor](https://github.com/zhongyang219/TrafficMonitor) by zhongyang219.
+**作者：lsw　｜　版本：v1.0.0**
 
-## Features
+---
 
-- ✅ Real-time network upload/download speed monitoring
-- ✅ CPU usage monitoring (with history)  
-- ✅ Memory (RAM) usage monitoring (with history)
-- ✅ Always-on-top borderless floating window
-- ✅ Draggable window (click-and-drag to reposition)
-- ✅ Network speed history graph
-- ✅ CPU/Memory progress bars
-- ✅ 4 built-in skins (Dark, Light, Green Matrix, Blue Neon)
-- ✅ Custom skin editor with full color pickers
-- ✅ Per-adapter or all-adapter network monitoring
-- ✅ Settings persistence (JSON config in AppData)
-- ✅ Historical daily/monthly traffic statistics
-- ✅ Right-click context menu
-- ✅ Memory usage alert notifications
-- ✅ Configurable refresh interval
-- ✅ Lock/unlock window position
-- ✅ Horizontal or vertical layout
+## 目录
 
-## Building
+1. [软件简介](#一软件简介)
+2. [安装与启动](#二安装与启动)
+3. [界面说明](#三界面说明)
+4. [基本操作](#四基本操作)
+5. [选项设置](#五选项设置)
+6. [皮肤与外观](#六皮肤与外观)
+7. [GPU 监控说明](#七gpu-监控说明)
+8. [常见问题](#八常见问题)
 
-### Prerequisites
+---
 
-- Rust 1.75+ (install from https://rustup.rs)
-- Windows 10/11 (primary target; also compiles on Linux/macOS)
+## 一、软件简介
 
-### Build
+**流量监控**是一款轻量级的 Windows 桌面悬浮窗工具，常驻屏幕一角，实时显示：
 
-```bash
-# Debug build (fast compile, slower runtime)
-cargo build
+| 左列 | 右列 |
+|------|------|
+| 上传速度 | CPU 占用率 |
+| 下载速度 | CPU 温度 |
+| 网速历史曲线（可选）| 内存占用率 |
+| | 显卡占用率 |
+| | 显卡温度 |
+| | 显存使用量 |
 
-# Release build (optimized, ~1MB executable)
-cargo build --release
+程序无边框、可透明、始终置顶，不占用任务栏空间，通过系统**托盘图标**管理。
 
-# Run directly
-cargo run
-cargo run --release
+---
+
+## 二、安装与启动
+
+### 方式一：直接运行（免安装）
+
+将 `流量监控.exe` 复制到任意目录，双击即可运行。
+
+### 方式二：使用安装程序
+
+双击 `流量监控-v1.0.0-安装程序.exe`，按提示完成安装。安装过程中可选择：
+
+- ☑ 创建桌面快捷方式
+- ☑ 开机自动启动
+
+### 自行编译
+
+若使用源码包，需先安装 [Rust 工具链](https://rustup.rs)，然后：
+
+```
+双击 build_release.bat
 ```
 
-The release binary will be at `target/release/traffic-monitor.exe`.
+编译完成后可执行文件位于 `dist\流量监控.exe`。
 
-## Project Structure
+---
+
+## 三、界面说明
+
+程序启动后，屏幕上会出现一个小型悬浮窗，同时任务栏**通知区域**（右下角时钟旁）出现程序图标。
 
 ```
-traffic-monitor/
-├── Cargo.toml              # Dependencies
-├── build.rs                # Windows resource embedding
-├── README.md               # This file
-└── src/
-    ├── main.rs             # Entry point, window configuration
-    ├── app.rs              # Main app logic, UI rendering, eframe::App
-    ├── monitor/
-    │   ├── mod.rs          # SystemMonitor aggregator
-    │   ├── network.rs      # Network speed monitoring (sysinfo)
-    │   ├── cpu.rs          # CPU usage monitoring
-    │   └── memory.rs       # RAM monitoring
-    ├── config/
-    │   └── mod.rs          # Settings, skins, persistence (JSON)
-    ├── ui/
-    │   ├── mod.rs          # UI module exports
-    │   ├── settings_dialog.rs  # Options dialog (General/Display/Skin/Network)
-    │   └── history_dialog.rs   # Traffic history (daily/monthly)
-    └── utils/
-        └── mod.rs          # Color interpolation, date helpers
+┌─────────────────────────────────┐
+│  ▲ 1.24 MB/s   CPU  18.6%      │
+│  ▼ 854  KB/s   CPU温度  52°C   │
+│                内存  63.4%      │
+│                GPU  34.2%       │
+│                GPU温度  68°C    │
+│                显存 3.1/8.0 GB  │
+└─────────────────────────────────┘
 ```
 
-## Configuration
+### 数值含义
 
-Config is stored at:
-- **Windows**: `%APPDATA%\TrafficMonitorRs\config.json`
-- **Linux**: `~/.config/TrafficMonitorRs/config.json`
-- **macOS**: `~/Library/Application Support/TrafficMonitorRs/config.json`
+| 显示内容 | 说明 |
+|----------|------|
+| ▲ 上传速度 | 当前网络上传速率，自动换算 B/KB/MB/GB |
+| ▼ 下载速度 | 当前网络下载速率 |
+| CPU | CPU 总体占用百分比，含进度条 |
+| CPU温度 | CPU 封装温度（°C），颜色随温度变化 |
+| 内存 | 物理内存占用百分比，含进度条 |
+| GPU | 显卡核心占用百分比（需 NVIDIA 显卡）|
+| GPU温度 | 显卡温度（°C）|
+| 显存 | 已用显存 / 总显存（MB）|
 
-## Usage
+### 温度颜色说明
 
-- **Drag** the window to reposition
-- **Right-click** for the context menu
-- **Options** → configure skins, display items, network adapter, refresh rate
-- **Traffic History** → view daily/monthly bandwidth usage
+| 颜色 | 温度范围 | 含义 |
+|------|----------|------|
+| 🟢 绿色 | < 50°C | 正常 |
+| 🟡 黄色 | 50 ~ 70°C | 偏高，注意散热 |
+| 🟠 橙色 | 70 ~ 85°C | 较高，检查散热 |
+| 🔴 红色 | > 85°C | 过热，立即检查 |
 
-## Architecture
+---
 
-| Component | Crate |
-|-----------|-------|
-| GUI framework | `eframe` + `egui` |
-| System metrics | `sysinfo` |
-| Serialization | `serde` + `serde_json` |
-| Date/time | `chrono` |
-| Config directory | `dirs` |
-| Logging | `log` + `env_logger` |
+## 四、基本操作
 
-## Comparison with Original
+### 移动窗口
 
-| Feature | Original (C++/MFC) | This Rust version |
-|---------|-------------------|-------------------|
-| Network speed | ✅ | ✅ |
-| CPU usage | ✅ | ✅ |
-| Memory usage | ✅ | ✅ |
-| Skins | ✅ | ✅ (4 built-in + custom editor) |
-| History | ✅ | ✅ |
-| Taskbar embed | ✅ | 🔜 (planned) |
-| Temperature | ✅ (hwmonitor) | 🔜 (planned) |
-| GPU usage | ✅ (hwmonitor) | 🔜 (planned) |
-| Plugin system | ✅ | 🔜 (planned) |
-| DPI aware | ✅ | ✅ (egui auto) |
+用鼠标**左键按住悬浮窗拖动**即可移动到屏幕任意位置。位置会在退出时自动保存，下次启动从上次位置恢复。
 
-## License
+### 打开设置
 
-GPL-3.0 (same as original TrafficMonitor)
+**右键单击托盘图标** → 选择 **⚙ 选项设置...**
+
+### 退出程序
+
+**右键单击托盘图标** → 选择 **✖ 退出**
+
+退出时会自动保存所有设置。
+
+### 锁定窗口位置
+
+在选项设置 → 常规 中勾选「锁定位置」，悬浮窗将无法被拖动，防止误操作移位。
+
+---
+
+## 五、选项设置
+
+右键托盘图标，点击「⚙ 选项设置」打开设置窗口，共分五个标签页。
+
+---
+
+### ⚙ 常规
+
+| 选项 | 说明 |
+|------|------|
+| 始终置顶 | 悬浮窗保持在所有窗口最前方 |
+| 鼠标穿透 | 开启后鼠标点击会穿透悬浮窗，点到下层窗口。**开启后无法拖动悬浮窗**，需在此处关闭后再操作 |
+| 锁定位置 | 禁止拖动，防止误移 |
+| 刷新间隔 | 数据刷新频率，默认 1000ms（1秒），可设 200ms ~ 5000ms |
+
+> 💡 **提示**：鼠标穿透适合将悬浮窗叠放在游戏或全屏视频上方，不影响鼠标操作。
+
+---
+
+### 👁 显示
+
+控制各数据项的显示与隐藏。
+
+**左列（网速）**
+
+- 显示上传速度
+- 显示下载速度
+- 显示速度单位（KB/s、MB/s 等）
+- 显示网速历史曲线（60秒滚动折线图）
+
+**右列（系统资源）**
+
+- 显示 CPU 占用 / CPU 进度条
+- 显示 CPU 温度
+- 显示内存占用 / 内存进度条
+- 显示显卡占用 / 显卡进度条（需 NVIDIA 显卡）
+- 显示显卡温度
+- 显示显存占用
+
+**其他**
+
+- 显示百分号（%）：关闭后数字后不显示 %
+
+---
+
+### 🎨 皮肤
+
+从下拉菜单选择内置皮肤：
+
+| 皮肤名 | 风格 |
+|--------|------|
+| 深色 | 深灰背景，适合大多数场景 |
+| 浅色 | 浅灰背景，适合浅色桌面 |
+| 绿色矩阵 | 黑底绿字，科技感 |
+| 蓝色霓虹 | 深蓝底，蓝白配色 |
+| 极简白 | 纯白背景，简洁清爽 |
+
+**透明度**（0% ~ 100%）
+
+- **0%**：背景完全透明，只剩文字和数字悬浮在桌面上
+- **50%**：半透明，可透出桌面壁纸
+- **100%**：完全不透明，纯色背景
+
+**圆角**：调节窗口圆角弧度（0 = 直角，最大 24px）
+
+**字体大小**：调节显示字号（9 ~ 18px）
+
+> 💡 调整完成后点击底部「💾 保存」按钮生效，关闭不保存。
+
+---
+
+### 🌐 网络
+
+选择要监控的网卡：
+
+- **自动（合计所有）**：将所有网卡的流量加总显示，适合多网卡电脑
+- **指定网卡**：只监控选定的网卡，如只看 Wi-Fi 或只看有线网卡
+
+下方列表显示当前系统检测到的所有网络适配器。
+
+---
+
+### ℹ 关于
+
+显示软件作者信息。
+
+---
+
+## 六、皮肤与外观
+
+### 透明度使用建议
+
+| 使用场景 | 建议透明度 |
+|----------|-----------|
+| 普通桌面监控 | 75% ~ 90% |
+| 游戏内覆盖显示 | 40% ~ 60% |
+| 仅查看数字，最简 | 0% ~ 20% |
+| 壁纸较深时 | 85% ~ 95% |
+
+### 配置文件位置
+
+设置保存在以下路径，可手动备份或迁移：
+
+```
+C:\Users\<用户名>\AppData\Roaming\TrafficMonitorRs\config.json
+```
+
+---
+
+## 七、GPU 监控说明
+
+GPU 相关功能（显卡占用、显卡温度、显存）依赖 **NVIDIA NVML 库**，需满足以下条件：
+
+| 条件 | 说明 |
+|------|------|
+| 显卡品牌 | 仅支持 **NVIDIA** 独立显卡 |
+| 驱动版本 | 需安装 NVIDIA 官方驱动（GeForce Driver 或 Studio Driver）|
+| AMD / Intel | 显示 `N/A`，不支持读取 |
+
+如果你有 NVIDIA 显卡但仍显示 `N/A`，请尝试：
+
+1. 更新 NVIDIA 驱动至最新版本
+2. 重启程序
+
+---
+
+## 八、常见问题
+
+**Q：程序启动后在哪里？**
+A：悬浮窗默认出现在屏幕左上角。如果看不到，请检查任务栏通知区域是否有图标，右键图标可确认程序在运行。
+
+**Q：中文显示为方块乱码？**
+A：程序自动加载系统微软雅黑字体。请确保系统中存在 `C:\Windows\Fonts\msyh.ttc`（Windows 10/11 默认自带）。
+
+**Q：拖动悬浮窗没有反应？**
+A：检查设置中「锁定位置」和「鼠标穿透」是否开启，两者均会阻止拖动。在托盘菜单打开设置关闭即可。
+
+**Q：CPU / GPU 温度显示 N/A？**
+A：CPU 温度需要主板支持温度传感器（大多数主板均支持）。GPU 温度仅支持 NVIDIA 显卡。部分杀毒软件会阻止读取传感器数据，可尝试将程序加入白名单。
+
+**Q：网速显示为 0？**
+A：在设置 → 网络 中检查选择的网卡是否正确。如使用 VPN 或虚拟网卡，可能需要切换到对应适配器，或选择「自动（合计所有）」。
+
+**Q：关闭窗口后程序还在运行吗？**
+A：悬浮窗无关闭按钮，通过**托盘图标 → 退出**来完全关闭程序。关闭时自动保存当前设置。
+
+**Q：如何设置开机自启？**
+A：使用安装程序安装时可勾选「开机自动启动」。若使用免安装版，可手动将程序快捷方式放入以下目录：
+```
+C:\Users\<用户名>\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup
+```
+
+---
+
+*流量监控 v1.0.0　·　作者：lsw*
